@@ -166,6 +166,13 @@ footer a{color:var(--neon);text-decoration:none}
       <div class="play">Войти в игру →</div>
       <span class="go">›</span>
     </button>
+    <button class="menu-card" data-game="compliments">
+      <span class="icon">✨</span><span class="badge">комплимент</span>
+      <h2>Комплименты</h2>
+      <p class="desc">Рандомайзер, который напишет тебе тёплый комплимент.</p>
+      <div class="play">Войти в игру →</div>
+      <span class="go">›</span>
+    </button>
   </div>
   <footer>
     Сделано для Вики с ❤️ · все игры работают офлайн ·
@@ -274,12 +281,33 @@ footer a{color:var(--neon);text-decoration:none}
   </div>
 </section>
 
+<!-- ======= SCREEN 6: COMPLIMENTS ======= -->
+<section class="screen" id="sc-compliments">
+  <div class="game-top">
+    <button class="back" data-back="menu">← Меню</button>
+    <div class="gt-title">✨ Комплименты <span>рандомайзер</span></div>
+  </div>
+  <div class="game-body" style="flex-direction:column;align-items:center;max-width:640px;margin:0 auto">
+    <div class="canvas-wrap" id="complWrap" style="min-height:260px;width:100%;display:flex;align-items:center;justify-content:center">
+      <div style="text-align:center;padding:36px 26px;width:100%">
+        <div id="complReel" style="font-size:15px;color:#7ff7dd;height:22px;letter-spacing:1px;opacity:.85;text-shadow:0 0 12px rgba(0,255,200,.5)"></div>
+        <div id="complResult" style="font-size:clamp(22px,4.5vw,32px);font-weight:800;line-height:1.4;margin:26px 0;min-height:120px;display:flex;align-items:center;justify-content:center">
+          <span id="complText" style="opacity:0;transition:opacity .5s">Нажми на кнопку, чтобы получить комплимент</span>
+        </div>
+        <div class="keys" style="justify-content:center"><span class="k">🎁</span></div>
+      </div>
+    </div>
+    <button class="btn" id="complBtn" style="max-width:360px">🎁 Получить комплимент</button>
+    <p style="color:var(--muted);font-size:13px;margin-top:8px;text-align:center">Нажимай сколько хочешь — каждый раз новый!</p>
+  </div>
+</section>
+
 <div class="toast" id="toast"></div>
 
 <script>
 /************ navigation ************/
 const $=s=>document.querySelector(s);
-const screens={menu:$('#sc-menu'),snake:$('#sc-snake'),clicker:$('#sc-clicker'),cats:$('#sc-cats'),memory:$('#sc-memory')};
+const screens={menu:$('#sc-menu'),snake:$('#sc-snake'),clicker:$('#sc-clicker'),cats:$('#sc-cats'),memory:$('#sc-memory'),compliments:$('#sc-compliments')};
 function show(g){
   Object.values(screens).forEach(s=>s.classList.remove('active'));
   (screens[g]||screens.menu).classList.add('active');
@@ -699,6 +727,55 @@ const stopFns=[];
   $('#memoryRestart').addEventListener('click',()=>{reset();started=true;});
   stopFns.push(()=>{});
   reset();
+})();
+
+/************ COMPLIMENTS ************/
+(function(){
+  const comps=[
+    'Ты — мой самый любимый человек на свете.',
+    'Твоя улыбка освещает целую комнату.',
+    'Ты делаешь обычный день особенным.',
+    'Мне безумно нравится, какой ты настоящая.',
+    'Ты красива и внутри, и снаружи.',
+    'С тобой время летит незаметно.',
+    'Ты мой источник вдохновения.',
+    'Твоя доброта бесконечна, как звёзды.',
+    'Ты лучший подарок в моей жизни.',
+    'Как ты улыбаешься — моя любимая картина.',
+    'Ты единственная и неповторимая.',
+    'Твоя энергия заряжает меня счастьем.',
+    'С тобой любое дело — радость.',
+    'Ты умеешь делать мир теплее.',
+    'Ты — моё счастье, Виктория.',
+    'Твои глаза — мои любимые звёзды.',
+    'Рядом с тобой я становлюсь лучше.',
+    'Ты — мой самый тёплый комплимент жизни.',
+    'В каждом твоём слове есть свет.',
+    'Ты, Вика, — просто волшебница.'
+  ];
+  const reelEl=$('#complReel'),textEl=$('#complText');
+  let reelInt=null;
+  function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+  function spin(){
+    // slot-machine reel effect
+    let frames=0;
+    clearInterval(reelInt);
+    reelInt=setInterval(()=>{
+      frames++;
+      reelEl.textContent=pick(comps);
+      if(frames>=14){
+        clearInterval(reelInt);reelInt=null;
+        const choice=pick(comps);
+        textEl.style.opacity='0';
+        setTimeout(()=>{textEl.textContent=choice;textEl.style.opacity='1';},180);
+        toast('💖 Так и есть!');
+      }
+    },70);
+  }
+  $('#complBtn').addEventListener('click',spin);
+  stopFns.push(()=>{if(reelInt)clearInterval(reelInt);});
+  // show default on load
+  textEl.textContent=comps[0];textEl.style.opacity='.9';
 })();
 
 /* stop all on navigating to menu */
