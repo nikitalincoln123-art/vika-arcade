@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вика Аркада — 4 игры</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0c;
+  --panel:#131317;
+  --panel2:#1a1a1f;
+  --border:#2a2a31;
+  --text:#e8e8ea;
+  --muted:#8a8a93;
+  --neon:#00ffc8;
+  --neon2:#00e5ff;
+}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(0,255,200,.06), transparent 60%),
+    radial-gradient(900px 500px at 10% 10%, rgba(0,229,255,.05), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+a{color:inherit}
+
+/* animated stars */
+.stars{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.star{
+  position:absolute;border-radius:50%;
+  background:var(--starC,#888);
+  animation:floaty var(--dur) ease-in-out infinite alternate;
+  opacity:.6;
+}
+@keyframes floaty{
+  from{transform:translateY(-8px)}
+  to{transform:translateY(12px)}
+}
+@keyframes glowPulse{
+  0%,100%{opacity:.55}
+  50%{opacity:1}
+}
+
+header{
+  position:relative;z-index:2;text-align:center;
+  padding:56px 20px 28px;
+}
+.logo{
+  font-size:14px;letter-spacing:6px;text-transform:uppercase;
+  color:var(--neon);margin-bottom:14px;
+  animation:glowPulse 3s ease-in-out infinite;
+}
+h1{
+  font-size:clamp(38px,8vw,64px);font-weight:800;
+  letter-spacing:1px;
+  background:linear-gradient(120deg,#ffffff,#c8c8d2,#6fd6c8);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+h1 b{color:var(--neon);-webkit-text-fill-color:var(--neon)}
+.sub{
+  margin-top:14px;color:var(--muted);font-size:16px;max-width:520px;
+  margin-left:auto;margin-right:auto;
+}
+
+.cards{
+  position:relative;z-index:2;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:22px;max-width:1200px;margin:34px auto 80px;padding:0 20px;
+}
+.card{
+  background:linear-gradient(180deg,var(--panel),var(--panel2));
+  border:1px solid var(--border);
+  border-radius:18px;padding:22px;position:relative;
+  transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;
+  overflow:hidden;
+}
+.card:hover{
+  transform:translateY(-6px);
+  border-color:#3a3a44;
+}
+.card.neon-card{border-color:rgba(0,255,200,.35);box-shadow:0 0 34px rgba(0,255,200,.10)}
+.card h2{font-size:22px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.card .desc{color:var(--muted);font-size:14px;margin-bottom:16px;line-height:1.5}
+.badge{
+  display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;
+  background:rgba(0,255,200,.12);color:var(--neon);border:1px solid rgba(0,255,200,.3);
+}
+.canvas-wrap{
+  position:relative;background:#050507;border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;margin-bottom:14px;
+}
+canvas{display:block;width:100%;height:auto;background:#050507}
+
+.btn{
+  font-family:inherit;font-size:15px;font-weight:600;color:#05111e;
+  background:linear-gradient(135deg,var(--neon),var(--neon2));
+  border:none;border-radius:10px;padding:12px 20px;cursor:pointer;
+  width:100%;transition:filter .2s,transform .1s;
+}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:scale(.97)}
+.btn.gray{background:#2a2a31;color:var(--text);box-shadow:none}
+.btn.gray:hover{background:#3a3a44}
+
+.score-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;font-size:14px;color:var(--muted);
+}
+.score-row strong{color:var(--text);font-size:18px}
+
+/* controls hint */
+.keys{
+  display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap;
+}
+.k{
+  font-size:12px;color:var(--muted);border:1px solid var(--border);
+  background:#0e0e12;padding:4px 9px;border-radius:6px;
+}
+
+/* game over overlay */
+.overlay{
+  position:absolute;inset:0;background:rgba(5,5,7,.88);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;z-index:5;backdrop-filter:blur(2px);text-align:center;padding:20px;
+}
+.overlay.hidden{display:none}
+.overlay h3{font-size:26px;color:var(--neon);text-shadow:0 0 18px rgba(0,255,200,.6)}
+.overlay p{color:var(--muted);font-size:14px}
+
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  padding:12px 20px;border-radius:12px;z-index:50;opacity:0;
+  transition:all .35s ease;font-size:14px;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{position:relative;z-index:2;text-align:center;color:var(--muted);font-size:13px;padding:30px 20px 50px}
+footer a{color:var(--neon);text-decoration:none}
+
+@media (max-width:640px){
+  .cards{grid-template-columns:1fr}
+  header{padding-top:40px}
+}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<header>
+  <div class="logo">Вика · Аркада</div>
+  <h1>Игровая <b>консоль</b> для Вики</h1>
+  <p class="sub">Четыре мини-игры в неоновой чёрно-серой теме. Змейка пылает, блоки взрываются, звёзды падают.</p>
+</header>
+
+<section class="cards">
+
+  <!-- SNAKE -->
+  <div class="card neon-card">
+    <h2>🐍 Змейка <span class="badge">неон</span></h2>
+    <p class="desc">Съедай светящиеся ягоды и расти. Каждая — больше очков и скорость.</p>
+    <div class="canvas-wrap">
+      <canvas id="snake" width="400" height="400"></canvas>
+      <div class="overlay hidden" id="snakeOverlay">
+        <h3>Играть</h3>
+        <p>Стрелки / WASD</p>
+        <button class="btn" id="snakeStart">Запустить</button>
+      </div>
+    </div>
+    <div class="score-row"><span>Счёт</span><strong id="snakeScore">0</strong></div>
+    <div class="keys"><span class="k">↑↓←→</span><span class="k">W A S D</span><span class="k">Space = пауза</span></div>
+  </div>
+
+  <!-- CLICKER -->
+  <div class="card">
+    <h2>👆 Кликер <span class="badge">тап</span></h2>
+    <p class="desc">Кликай. Покупай апгрейды. Заполни счётчик до цели. Каждый клик — вспышка.</p>
+    <div class="score-row"><span>Всего кликов</span><strong id="clickCount">0</strong></div>
+    <button class="btn" id="clickBtn">Нажми меня!</button>
+    <div style="height:12px"></div>
+    <div class="score-row"><span>Очки генерится</span><strong id="clickRate">+0/сек</strong></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn gray" id="buyClick" style="flex:1">🔨 +1/клик · 10</button>
+      <button class="btn gray" id="buyAuto" style="flex:1">⚙️ +1/сек · 50</button>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn" id="prestigeBtn">🚀 Престиж ×2 за 1000</button>
+    <div class="keys" style="margin-top:12px"><span class="k">цель: 2048 очков</span><span class="k" id="prestigeInfo">Престижей: 0</span></div>
+  </div>
+
+  <!-- BLOCK BLAST -->
+  <div class="card neon-card">
+    <h2>💥 Блок Баст <span class="badge">неон</span></h2>
+    <p class="desc">Заполни ряды — они взорвутся со вспышкой. Светящаяся сетка.</p>
+    <div class="canvas-wrap">
+      <canvas id="blast" width="300" height="300"></canvas>
+    </div>
+    <div class="score-row"><span>Счёт</span><strong id="blastScore">0</strong></div>
+    <button class="btn" id="blastHint" style="margin-bottom:8px">💡 Подсказать ход</button>
+    <button class="btn" id="blastNew">🔄 Новая игра</button>
+  </div>
+
+  <!-- VIKA GAME -->
+  <div class="card">
+    <h2>⭐ Игра Вики <span class="badge">personal</span></h2>
+    <p class="desc">Звёзды падают за Викой. Лови их корзиной, пропускай только тёмные.</p>
+    <div class="canvas-wrap">
+      <canvas id="vika" width="400" height="300"></canvas>
+      <div class="overlay hidden" id="vikaOverlay">
+        <h3>Лови звёзды!</h3>
+        <p>Мышь / пальцы · цель 20 звёзд</p>
+        <button class="btn" id="vikaStart">Играть за Вику</button>
+      </div>
+    </div>
+    <div class="score-row"><span>Звёзды</span><strong id="vikaScore">0 / 20</strong></div>
+    <div class="keys"><span class="k">двигай корзину</span><span class="k">лови яркие звёзды</span></div>
+  </div>
+
+</section>
+
+<footer>
+  Сделано для Вики с ❤️ · все игры работают офлайн · <a href="https://github.com/nikitalincoln123-art/vika-arcade" target="_blank" rel="noopener">GitHub</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/************ shared ************/
+const $=s=>document.querySelector(s);
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2000);}
+
+/* stars background */
+(function(){
+  const wrap=$('#stars');const colors=['#1f1f26','#2a2a33','#33333d'];
+  for(let i=0;i<42;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2+1;
+    s.style.width=sz+'px';s.style.height=sz+'px';
+    s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';
+    s.style.setProperty('--dur',(3+Math.random()*5)+'s');
+    s.style.background=colors[Math.floor(Math.random()*colors.length)];
+    wrap.appendChild(s);
+  }
+})();
+
+/************ SNAKE ************/
+(function(){
+  const cv=$('#snake'),ctx=cv.getContext('2d');
+  const ov=$('#snakeOverlay');
+  const B=20,G=cv.width/B;
+  let snake,dir,nextDir,food,score,timer,run,speed;
+  const scoreEl=$('#snakeScore');
+
+  function reset(){
+    snake=[{x:Math.floor(G/2),y:Math.floor(G/2)}];
+    dir={x:1,y:0};nextDir={x:1,y:0};
+    score=0;scoreEl.textContent=0;speed=110;
+    placeFood();
+  }
+  function placeFood(){
+    let p;
+    do p={x:Math.floor(Math.random()*G),y:Math.floor(Math.random()*G)};
+    while(snake.some(s=>s.x===p.x&&s.y===p.y));
+    food=p;
+  }
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    // grid
+    ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=1;
+    for(let i=1;i<G;i++){
+      ctx.beginPath();ctx.moveTo(i*B,0);ctx.lineTo(i*B,cv.height);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,i*B);ctx.lineTo(cv.width,i*B);ctx.stroke();
+    }
+    // snake - glowing neon
+    const grd=ctx.createLinearGradient(0,0,cv.width,cv.height);
+    grd.addColorStop(0,'#00ffc8');grd.addColorStop(1,'#00e5ff');
+    snake.forEach((seg,i)=>{
+      const t=i/snake.length;
+      const col=i===snake.length-1?'#ffffff':'#00ffc8';
+      ctx.save();
+      ctx.shadowColor=i===snake.length-1?'#ffffff':'#00ffc8';
+      ctx.shadowBlur=i===0?24:12;
+      ctx.fillStyle=i===0?'#b4fff1':col;
+      const r=B/2*0.85;
+      ctx.beginPath();
+      ctx.roundRect(seg.x*B+B/2,seg.y*B+B/2,r,r,[5]);
+      ctx.fill();
+      ctx.restore();
+    });
+    // food
+    const t=Date.now()/220;
+    const pulse=.8+Math.sin(t)*.2;
+    ctx.save();
+    ctx.shadowColor='#ff3d6b';ctx.shadowBlur=22;
+    ctx.fillStyle='#ff3d6b';
+    ctx.beginPath();ctx.arc(food.x*B+B/2,food.y*B+B/2,B/2*pulse,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  function step(){
+    dir=nextDir;
+    const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+    if(head.x<0||head.y<0||head.x>=G||head.y>=G||snake.some(s=>s.x===head.x&&s.y===head.y)){
+      return gameOver();
+    }
+    snake.unshift(head);
+    if(head.x===food.x&&head.y===food.y){
+      score++;scoreEl.textContent=score;placeFood();
+      if(speed>50)speed=Math.max(50,speed-3);
+      draw();
+    } else snake.pop();
+    draw();
+  }
+  function gameOver(){
+    clearInterval(timer);run=false;
+    ov.classList.remove('hidden');
+    ov.querySelector('h3').textContent='Игра окончена';
+    ov.querySelector('p').textContent='Счёт: '+score;
+    $('#snakeStart').textContent='Сыграть снова';
+    toast('Змейка разбилась 💥');
+  }
+  function start(){
+    reset();draw();
+    ov.classList.add('hidden');
+    run=true;
+    clearInterval(timer);
+    timer=setInterval(step,speed);
+  }
+  $('#snakeStart').addEventListener('click',()=>{start();snake.focus&&0;});
+  document.addEventListener('keydown',e=>{
+    const map={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+    let k=map[e.key];
+    if(!k&&e.key.toLowerCase()==='w')k=[0,-1];
+    if(!k&&e.key.toLowerCase()==='s')k=[0,1];
+    if(!k&&e.key.toLowerCase()==='a')k=[-1,0];
+    if(!k&&e.key.toLowerCase()==='d')k=[1,0];
+    if(k){
+      e.preventDefault();
+      const nd={x:k[0],y:k[1]};
+      if(nd.x===-dir.x&&nd.y===-dir.y)return;
+      nextDir=nd;
+    }
+    if(e.code==='Space'&&run){
+      e.preventDefault();
+      if(timer){clearInterval(timer);timer=null;}
+      else timer=setInterval(step,speed);
+    }
+  });
+  draw();
+})();
+
+/************ CLICKER ************/
+(function(){
+  const countEl=$('#clickCount'),rateEl=$('#clickRate'),preInfo=$('#prestigeInfo');
+  let clicks=0,perClick=1,auto=0,prestige=0;
+  const buyC=$('#buyClick'),buyA=$('#buyAuto'),preBtn=$('#prestigeBtn');
+  let intv=setInterval(()=>{
+    if(auto&&clicks<1280){clicks=Math.min(1280,clicks+10);render();if(clicks>=1280&&!won){won=true;toast('🎉 Цель 1280 достигнута! Сделай престиж');}}
+  },100);
+  let won=false;
+  function render(){
+    countEl.textContent=Math.floor(clicks);
+    rateEl.textContent='+'+perClick+'/клик · +'+auto+'/сек';
+    preInfo.textContent='Престижей: '+prestige+' · ×'+Math.pow(2,prestige);
+    // incremental highlight when affordable
+    ['click','auto'].forEach(t=>{});
+  }
+  $('#clickBtn').addEventListener('click',e=>{
+    clicks+=perClick;render();
+    // floating particle/animation
+    const btn=e.currentTarget;
+    btn.style.transform='scale(.94)';setTimeout(()=>btn.style.transform='',90);
+    if(clicks>=1280&&!won){won=true;toast('🎉 Цель 1280! Нажми престиж');}
+  });
+  buyC.addEventListener('click',()=>{
+    const cost=10+prestige*20;
+    if(clicks<cost){toast('Нужно '+cost+' кликов');return;}
+    clicks-=cost;perClick++;
+    render();toast('Сила клика +1');
+  });
+  buyA.addEventListener('click',()=>{
+    const cost=50+prestige*60;
+    if(clicks<cost){toast('Нужно '+cost+' кликов');return;}
+    clicks-=cost;auto+=1;
+    render();toast('Автокликер запущен');
+  });
+  preBtn.addEventListener('click',()=>{
+    if(clicks<1000){toast('Нужно 1000 кликов');return;}
+    clicks-=1000;prestige++;
+    perClick=1+prestige*2;auto=Math.floor(auto/2)+1;
+    won=false;
+    render();toast('🚀 Престиж! Мощность ×'+Math.pow(2,prestige));
+  });
+  render();
+})();
+
+/************ BLOCK BLAST ************/
+(function(){
+  const cv=$('#blast'),ctx=cv.getContext('2d');
+  const N=6,S=cv.width/N;
+  let grid,score;
+  const scoreEl=$('#blastScore');
+  const COLORS=['#00ffc8','#00e5ff','#ff3d6b','#fff06b','#a07bff'];
+
+  function newGrid(){
+    grid=Array.from({length:N},()=>Array(N).fill(0));
+  }
+  function spawn(){
+    const empty=[];
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(!grid[r][c])empty.push([r,c]);
+    if(!empty.length)return;
+    for(let i=0;i<3;i++){
+      const e=empty.splice(Math.floor(Math.random()*empty.length),1)[0];
+      if(!e)break;
+      grid[e[0]][e[1]]=Math.floor(Math.random()*COLORS.length)+1;
+    }
+    draw();
+  }
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    // grid lines
+    ctx.strokeStyle='rgba(255,255,255,.06)';
+    for(let i=1;i<N;i++){
+      ctx.beginPath();ctx.moveTo(i*S,0);ctx.lineTo(i*S,cv.height);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,i*S);ctx.lineTo(cv.width,i*S);ctx.stroke();
+    }
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+      if(!grid[r][c])continue;
+      const col=COLORS[grid[r][c]-1];
+      ctx.save();
+      ctx.shadowColor=col;ctx.shadowBlur=14;
+      ctx.fillStyle=col;
+      ctx.beginPath();ctx.roundRect(c*S+3,r*S+3,S-6,S-6,[6]);ctx.fill();
+      ctx.restore();
+    }
+  }
+  function gravity(){
+    for(let c=0;c<N;c++){
+      const col=[];
+      for(let r=N-1;r>=0;r--)if(grid[r][c])col.push(grid[r][c]);
+      while(col.length<N)col.push(0);
+      for(let r=0;r<N;r++)grid[r][c]=col[N-1-r];
+    }
+  }
+  function findMatches(demo){
+    const g=demo||grid,matches=new Set();
+    for(let r=0;r<N;r++)for(let c=0;c<N-2;c++){
+      if(g[r][c]&&g[r][c]===g[r][c+1]&&g[r][c]===g[r][c+2]){
+        matches.add(r+','+c);matches.add(r+','+(c+1));matches.add(r+','+(c+2));
+      }
+    }
+    for(let c=0;c<N;c++)for(let r=0;r<N-2;r++){
+      if(g[r][c]&&g[r][c]===g[r+1][c]&&g[r][c]===g[r+2][c]){
+        matches.add(r+','+c);matches.add((r+1)+','+c);matches.add((r+2)+','+c);
+      }
+    }
+    return matches;
+  }
+  function clearMatched(m,animate){
+    m.forEach(key=>{const [r,c]=key.split(',');grid[+r][+c]=0;});
+    score++;scoreEl.textContent=score;
+  }
+  let sel=null;
+  cv.addEventListener('click',e=>{
+    const rect=cv.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(cv.width/rect.width);
+    const y=(e.clientY-rect.top)*(cv.height/rect.height);
+    const c=Math.floor(x/S),r=Math.floor(y/S);
+    if(sel){
+      const [sr,sc]=sel;
+      const dr=Math.abs(r-sr),dc=Math.abs(c-sc);
+      if((dr===1&&dc===0)||(dr===0&&dc===1)){
+        swap(sr,sc,r,c);
+      }
+      sel=null;draw();updateSel();return;
+    }
+    sel=[r,c];draw();updateSel();
+  });
+  function updateSel(){
+    if(sel){
+      ctx.save();
+      ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
+      ctx.strokeRect(sel[1]*S+2,sel[0]*S+2,S-4,S-4);
+      ctx.restore();
+    }
+  }
+  function swap(r1,c1,r2,c2){
+    const t=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=t;
+    const m=findMatches();
+    if(m.size){
+      clearMatched(m);
+      resolve();
+      draw();
+    } else {
+      const t2=grid[r1][c1];grid[r1][c1]=grid[r2][c2];grid[r2][c2]=t2;
+    }
+  }
+  function resolve(){
+    let guard=0;
+    while(guard<30){
+      gravity();
+      const m=findMatches();
+      if(!m.size)break;
+      clearMatched(m);
+      guard++;
+    }
+    gravity();
+  }
+  $('#blastHint').addEventListener('click',()=>{
+    // find any valid move
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+      for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+        if(Math.abs(dr)+Math.abs(dc)!==1)continue;
+        const r2=r+dr,c2=c+dc;
+        if(r2<0||r2>=N||c2<0||c2>=N)continue;
+        const t=grid[r][c];grid[r][c]=grid[r2][c2];grid[r2][c2]=t;
+        const m=findMatches();
+        const t2=grid[r][c];grid[r][c]=grid[r2][c2];grid[r2][c2]=t2;
+        if(m.size){
+          toast('Попробуй: ('+(r+1)+','+(c+1)+') → ('+(r2+1)+','+(c2+1)+')');
+          return;
+        }
+      }
+    }
+    toast('Нет ходов — новая игра');
+    score=0;scoreEl.textContent=0;newGrid();spawn();spawn();spawn();draw();
+  });
+  $('#blastNew').addEventListener('click',()=>{
+    score=0;scoreEl.textContent=0;newGrid();spawn();spawn();spawn();draw();
+  });
+  newGrid();spawn();spawn();spawn();draw();
+})();
+
+/************ VIKA GAME ************/
+(function(){
+  const cv=$('#vika'),ctx=cv.getContext('2d');
+  const ov=$('#vikaOverlay');
+  const W=cv.width,H=cv.height;
+  const scoreEl=$('#vikaScore');
+  const BW=64,BH=16;
+  let bx=W/2-BW/2;
+  let stars=[],score=0,lives=3,run=false,raf,t=0,spawnT=0;
+  const WIN=20;
+
+  function reset(){
+    score=0;lives=3;stars=[];
+    scoreEl.textContent='0 / '+WIN;
+    bx=W/2-BW/2;
+  }
+  function lose(){
+    run=false;cancelAnimationFrame(raf);
+    ov.classList.remove('hidden');
+    ov.querySelector('h3').textContent='💜 Вика старалась!';
+    ov.querySelector('p').textContent='Звёзд собрано: '+score+' · осталось жизней: '+lives;
+    $('#vikaStart').textContent='Сыграть снова';
+  }
+  function winGame(){
+    run=false;cancelAnimationFrame(raf);
+    ov.classList.remove('hidden');
+    ov.querySelector('h3').textContent='✨ Победа, Вика!';
+    ov.querySelector('p').textContent='Все 20 звёзд собраны! Ты молодец!';
+    $('#vikaStart').textContent='Ещё разок';
+    toast('🎉 Победа! Вика королева звёзд!');
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // bg grid
+    ctx.strokeStyle='rgba(255,255,255,.03)';
+    for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+    for(let i=0;i<H;i+=40){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(W,i);ctx.stroke();}
+    // stars
+    stars.forEach(s=>{
+      const pulse=.85+Math.sin(t/120+s.seed)*.15;
+      ctx.save();
+      if(s.bright){
+        ctx.shadowColor='#fff06b';ctx.shadowBlur=20;
+        ctx.fillStyle='#fff06b';
+      } else {
+        ctx.shadowColor='#6a6a73';ctx.shadowBlur=6;
+        ctx.fillStyle='#5a5a63';
+      }
+      drawStar(s.x,s.y,11*pulse,5*pulse,5);
+      ctx.restore();
+    });
+    // basket / catcher
+    ctx.save();
+    ctx.shadowColor='#00ffc8';ctx.shadowBlur=16;
+    ctx.fillStyle='#0f2220';
+    ctx.strokeStyle='#00ffc8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(bx,H-36,BW,BH,[5]);ctx.fill();ctx.stroke();
+    ctx.restore();
+  }
+  function drawStar(cx,cy,outer,inner,points){
+    ctx.beginPath();
+    for(let i=0;i<points*2;i++){
+      const rad=i%2===0?outer:inner;
+      const a=(i*Math.PI/points)-Math.PI/2;
+      const x=cx+Math.cos(a)*rad,y=cy+Math.sin(a)*rad;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath();ctx.fill();
+  }
+  function loop(){
+    t++;
+    spawnT++;
+    if(spawnT>36){spawnT=0;stars.push({x:40+Math.random()*(W-80),y:-20,vy:1.4+Math.random()*1.3,bright:Math.random()<0.75,seed:Math.random()*10});}
+    for(let i=stars.length-1;i>=0;i--){
+      const s=stars[i];
+      s.y+=s.vy;
+      // catch
+      if(s.y+11>H-36&&Math.abs(s.x-bx-BW/2)<38){
+        stars.splice(i,1);
+        if(s.bright){score++;scoreEl.textContent=score+' / '+WIN;if(score>=WIN){winGame();return;}}
+        else{ /* dark star: pass */ }
+        continue;
+      }
+      if(s.y>H+20){
+        if(s.bright){lives--;if(lives<=0){lose();return;}}
+        stars.splice(i,1);
+        continue;
+      }
+    }
+    draw();
+    if(run)raf=requestAnimationFrame(loop);
+  }
+  function start(){
+    reset();
+    ov.classList.add('hidden');
+    run=true;
+    cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(loop);
+  }
+  $('#vikaStart').addEventListener('click',start);
+  cv.addEventListener('mousemove',e=>{
+    if(!run)return;
+    const rect=cv.getBoundingClientRect();
+    bx=Math.max(0,Math.min(W-BW,(e.clientX-rect.left)*(W/rect.width)-BW/2));
+  });
+  cv.addEventListener('touchmove',e=>{
+    if(!run)return;
+    e.preventDefault();
+    const rect=cv.getBoundingClientRect();
+    const tch=e.touches[0];
+    bx=Math.max(0,Math.min(W-BW,(tch.clientX-rect.left)*(W/rect.width)-BW/2));
+  },{passive:false});
+  draw();
+})();
+</script>
+</body>
+</html>
